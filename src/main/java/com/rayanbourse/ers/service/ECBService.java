@@ -14,6 +14,9 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import java.io.StringReader;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * European Central Bank Rate
@@ -26,22 +29,33 @@ public class ECBService implements ExchangeRate {
     private String ecbUrl;
     @Autowired
     private RestTemplate restClient;
-    private List<CubeData> cubes;
+    private Map<String, CubeData> cubes;
 
     @Scheduled(fixedRate = 60000, initialDelay = 1000)
     private void fillCubeData() {
         var ecbXmlData = restClient.getForObject(ecbUrl, String.class);
         var envelop = convertECBXmlToObject(ecbXmlData);
-        cubes = envelop.getCube().getCubes().stream().findAny().orElseThrow().getCubeData();
+        cubes = envelop.getCube().getCubes().stream().findAny().orElseThrow().getCubeData().stream()
+                .collect(Collectors.toMap(CubeData::getCurrency, Function.identity()));
     }
 
     private Envelope convertECBXmlToObject(String ecbXmlData) {
         try {
-            JAXBContext jaxbContext = JAXBContext.newInstance(Envelope.class);
-            Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
+            var jaxbContext = JAXBContext.newInstance(Envelope.class);
+            var unmarshaller = jaxbContext.createUnmarshaller();
             return (Envelope) unmarshaller.unmarshal(new StringReader(ecbXmlData));
         } catch (JAXBException e) {
             throw new RuntimeException("Failed to parse ECB rates", e);
         }
+    }
+
+    @Override
+    public double getExchangeRate(String currencyPair) {
+        var currencies = currencyPair.split("/");
+        var base = currencies[0];
+        var target = currencies[1];
+        double baseRate = base.equals("EUR") ? 1.0 : cubes.get(base).getRate();
+        double targetRate = target.equals("EUR") ? 1.0 : cubes.get(target).getRate();
+        return targetRate / baseRate;
     }
 }
