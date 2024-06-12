@@ -51,4 +51,9 @@ class ECBServiceTest {
         assertEquals(1, ecbService.getCurrenciesNumberCall().get("USD"));
         assertEquals(0, ecbService.getCurrenciesNumberCall().get("EUR"));
     }
+
+    @Test
+    public void testConvert() {
+        assertEquals(1.073, ecbService.convert("EUR", "USD", 1.0));
+    }
 }

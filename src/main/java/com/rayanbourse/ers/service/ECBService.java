@@ -72,4 +72,9 @@ public class ECBService implements ExchangeRate {
     public Map<String, Integer> getCurrenciesNumberCall() {
         return currenciesNumberToCall;
     }
+
+    @Override
+    public double convert(String from, String to, double amount) {
+        return amount * getExchangeRate(from + "/" + to);
+    }
 }
