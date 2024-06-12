@@ -18,7 +18,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * European Central Bank Rate
+ * European Central Bank Rate Implementation
  */
 @Service
 @EnableScheduling
@@ -29,7 +29,7 @@ public class ECBService implements ExchangeRate {
     @Autowired
     private RestTemplate restClient;
     private Map<String, CubeData> cubes;
-    private Map<String, Integer> currenciesNumberToCall = new HashMap<>();
+    private final Map<String, Integer> currenciesNumberToCall = new HashMap<>();
 
     @Scheduled(fixedRate = 60000)
     private void fillCubeData() {
@@ -39,16 +39,6 @@ public class ECBService implements ExchangeRate {
                 .collect(Collectors.toMap(CubeData::getCurrency, Function.identity()));
         cubes.put("EUR", new CubeData("EUR", 1.0));
         cubes.keySet().forEach(currency -> currenciesNumberToCall.put(currency, currenciesNumberToCall.getOrDefault(currency, 0 )));
-    }
-
-    private Envelope convertECBXmlToObject(String ecbXmlData) {
-        try {
-            var jaxbContext = JAXBContext.newInstance(Envelope.class);
-            var unmarshaller = jaxbContext.createUnmarshaller();
-            return (Envelope) unmarshaller.unmarshal(new StringReader(ecbXmlData));
-        } catch (JAXBException e) {
-            throw new RuntimeException("Failed to parse ECB rates", e);
-        }
     }
 
     @Override
@@ -81,5 +71,15 @@ public class ECBService implements ExchangeRate {
     @Override
     public String drawChart(String from, String to) {
         return String.format("https://www.xe.com/currencycharts/?from=%s&to=%s",from, to);
+    }
+
+    private Envelope convertECBXmlToObject(String ecbXmlData) {
+        try {
+            var jaxbContext = JAXBContext.newInstance(Envelope.class);
+            var unmarshaller = jaxbContext.createUnmarshaller();
+            return (Envelope) unmarshaller.unmarshal(new StringReader(ecbXmlData));
+        } catch (JAXBException e) {
+            throw new RuntimeException("Failed to parse ECB rates", e);
+        }
     }
 }
