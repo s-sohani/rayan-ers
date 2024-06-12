@@ -56,4 +56,10 @@ class ECBServiceTest {
     public void testConvert() {
         assertEquals(1.073, ecbService.convert("EUR", "USD", 1.0));
     }
+
+    @Test
+    public void testDrawChart() {
+        var res = ecbService.drawChart("USD", "EUR");
+        assertEquals("https://www.xe.com/currencycharts/?from=USD&to=EUR", res);
+    }
 }

@@ -77,4 +77,9 @@ public class ECBService implements ExchangeRate {
     public double convert(String from, String to, double amount) {
         return amount * getExchangeRate(from + "/" + to);
     }
+
+    @Override
+    public String drawChart(String from, String to) {
+        return String.format("https://www.xe.com/currencycharts/?from=%s&to=%s",from, to);
+    }
 }
