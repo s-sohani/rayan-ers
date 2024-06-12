@@ -11,9 +11,8 @@ import org.springframework.web.client.RestTemplate;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
-import javax.xml.bind.Unmarshaller;
 import java.io.StringReader;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -30,13 +29,16 @@ public class ECBService implements ExchangeRate {
     @Autowired
     private RestTemplate restClient;
     private Map<String, CubeData> cubes;
+    private Map<String, Integer> currenciesNumberToCall = new HashMap<>();
 
-    @Scheduled(fixedRate = 60000, initialDelay = 1000)
+    @Scheduled(fixedRate = 60000)
     private void fillCubeData() {
         var ecbXmlData = restClient.getForObject(ecbUrl, String.class);
         var envelop = convertECBXmlToObject(ecbXmlData);
         cubes = envelop.getCube().getCubes().stream().findAny().orElseThrow().getCubeData().stream()
                 .collect(Collectors.toMap(CubeData::getCurrency, Function.identity()));
+        cubes.put("EUR", new CubeData("EUR", 1.0));
+        cubes.keySet().forEach(currency -> currenciesNumberToCall.put(currency, currenciesNumberToCall.getOrDefault(currency, 0 )));
     }
 
     private Envelope convertECBXmlToObject(String ecbXmlData) {
@@ -50,12 +52,24 @@ public class ECBService implements ExchangeRate {
     }
 
     @Override
+    public boolean isReady() {
+        return cubes != null && !cubes.isEmpty();
+    }
+
+    @Override
     public double getExchangeRate(String currencyPair) {
         var currencies = currencyPair.split("/");
         var base = currencies[0];
         var target = currencies[1];
-        double baseRate = base.equals("EUR") ? 1.0 : cubes.get(base).getRate();
-        double targetRate = target.equals("EUR") ? 1.0 : cubes.get(target).getRate();
+        double baseRate = cubes.get(base).getRate();
+        double targetRate = cubes.get(target).getRate();
+        currenciesNumberToCall.compute(base, (k, v) -> + 1);
+        currenciesNumberToCall.compute(target, (k, v) -> + 1);
         return targetRate / baseRate;
+    }
+
+    @Override
+    public Map<String, Integer> getCurrenciesNumberCall() {
+        return currenciesNumberToCall;
     }
 }

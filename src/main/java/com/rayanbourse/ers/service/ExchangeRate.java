@@ -1,7 +1,10 @@
 package com.rayanbourse.ers.service;
 
-public interface ExchangeRate {
+import java.util.Map;
 
+public interface ExchangeRate {
+    boolean isReady();
     double getExchangeRate(String currencyPair);
+    Map<String, Integer> getCurrenciesNumberCall();
 
 }

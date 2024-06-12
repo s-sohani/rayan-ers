@@ -1,15 +1,12 @@
 package com.rayanbourse.ers.service;
 
-import com.rayanbourse.ers.model.ecb.CubeData;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 class ECBServiceTest {
@@ -17,15 +14,41 @@ class ECBServiceTest {
     @Autowired
     public ECBService ecbService;
 
-    @Test
-    public void testFetchData() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        List<CubeData> cubes = (List<CubeData>) getFetchDataMethod().invoke(ecbService);
-        assertFalse(cubes.isEmpty());
+    @BeforeEach
+    public void setUp() {
+        await().until(() -> ecbService.isReady());
     }
 
-    private Method getFetchDataMethod() throws NoSuchMethodException {
-        Method method = ECBService.class.getDeclaredMethod("fetchData");
-        method.setAccessible(true);
-        return method;
+    @Test
+    public void testFillCubeData() {
+        assertTrue(ecbService.isReady());
+    }
+
+    @Test
+    public void testGetExchangeRate_validInput_getRate() {
+        var result = ecbService.getExchangeRate("USD/EUR");
+        assertEquals(0.9319664492078286, result);
+
+        result = ecbService.getExchangeRate("HUF/EUR");
+        assertEquals(0.0025340192078655956, result);
+
+        result = ecbService.getExchangeRate("HUF/USD");
+        assertEquals(0.002719002610039784, result);
+    }
+
+    @Test
+    public void testGetExchangeRate_inValidInput_throwException() {
+        assertThrows(NullPointerException.class, () -> ecbService.getExchangeRate("invalid/EUR"));
+    }
+
+    @Test
+    public void testGetCurrenciesNumberCall(){
+        assertEquals(0, ecbService.getCurrenciesNumberCall().get("HUF"));
+        assertEquals(0, ecbService.getCurrenciesNumberCall().get("USD"));
+        assertEquals(0, ecbService.getCurrenciesNumberCall().get("EUR"));
+        ecbService.getExchangeRate("HUF/USD");
+        assertEquals(1, ecbService.getCurrenciesNumberCall().get("HUF"));
+        assertEquals(1, ecbService.getCurrenciesNumberCall().get("USD"));
+        assertEquals(0, ecbService.getCurrenciesNumberCall().get("EUR"));
     }
 }
